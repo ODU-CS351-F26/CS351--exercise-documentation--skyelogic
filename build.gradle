@@ -15,7 +15,9 @@ java {
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
 }
 
@@ -31,3 +33,51 @@ application { //Allows  ./gradlew run --args=path-to-test-data
     mainClass = 'edu.odu.cs.MostCommonWords'
 }
 
+
+
+// ---------- Report generation ----------
+
+// Copy our hand-written web content (index.md, etc.) into build/reports
+tasks.register('copyHtml', Copy) {
+    mustRunAfter 'test'
+    from 'src/main/html'
+    into 'build/reports'
+}
+
+// Copy the generated javadoc (build/docs/javadoc) into build/reports
+tasks.register('copyDocs', Copy) {
+    dependsOn 'javadoc'
+    mustRunAfter 'test'
+    from 'build/docs'
+    into 'build/reports'
+}
+
+// Build, test, generate javadoc, then gather everything into build/reports
+tasks.register('reports') {
+    dependsOn 'build', 'javadoc', 'copyHtml', 'copyDocs'
+}
+
+
+// ---------- Deployment to GitHub Pages ----------
+
+gitPublish {
+    // the repository
+       repoUri = 'git@github.com:ODU-CS351-F26/CS351--exercise-documentation--skyelogic.git'
+
+    // branch in which to publish
+    branch = 'gh-pages'
+
+    // what to publish
+    contents {
+        from 'build/reports'
+    }
+}
+
+// Make sure the reports exist before they are copied for publishing
+tasks.named('gitPublishCopy') {
+    dependsOn 'reports'
+}
+
+tasks.register('deployReports') {
+    dependsOn 'reports', 'gitPublishPush'
+}
